@@ -1,0 +1,13 @@
+{
+  "hostname": "partial.example.com",
+  "resolved_at": "2026-01-15T10:31:12Z",
+  "records": [
+    {"record_type": "A", "value": "192.0.2.10"},
+    {"record_type": "A", "value": "192.0.2.11"},
+    {"record_type": "CNAME", "value": "cdn.provider.net."}
+  ],
+  "errors": {
+    "AAAA": "TIMEOUT",
+    "MX": "TIMEOUT"
+  }
+}

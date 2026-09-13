@@ -1,0 +1,1 @@
+"""Network-level recon adapters (port scanning, service fingerprinting). Future phase."""

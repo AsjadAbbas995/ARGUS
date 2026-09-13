@@ -1,0 +1,1 @@
+"""Subdomain discovery adapters (subfinder, amass, assetfinder, crt). Placeholder for Step 7."""

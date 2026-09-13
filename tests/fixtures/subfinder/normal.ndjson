@@ -1,0 +1,5 @@
+{"host": "app.example.com", "source": "crt.sh"}
+{"host": "api.example.com", "source": "virustotal"}
+{"host": "dev.example.com", "source": "crt.sh"}
+{"host": "staging.example.com", "source": "alienvault"}
+{"host": "admin.example.com", "source": "securitytrails"}

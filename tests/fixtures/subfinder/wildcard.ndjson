@@ -1,0 +1,3 @@
+{"host": "*.cdn.example.com", "source": "crt.sh"}
+{"host": "*.static.example.com.", "source": "crt.sh"}
+{"host": "real.example.com", "source": "crt.sh"}

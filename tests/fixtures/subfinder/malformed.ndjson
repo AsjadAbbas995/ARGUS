@@ -1,0 +1,8 @@
+{"host": "app.example.com", "source": "crt.sh"}
+not valid json at all
+{"host": "mail.example.com   ", "source": "waybackarchive"}
+{ "host": 12345 }
+{"host": "WWW.example.com.", "source": "hackertarget"}
+{"host": "app.example.com", "source": "virus total"}
+{"host": "x.example.com", "broken": true,
+{"host": "api.example.com", "source": "crt.sh"}

@@ -1,0 +1,1 @@
+"""Persistence layer: SQL models, migrations, and repositories. Placeholder for Step 3."""

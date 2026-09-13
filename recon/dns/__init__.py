@@ -1,0 +1,1 @@
+"""DNS resolution adapters. Placeholder for Step 8."""

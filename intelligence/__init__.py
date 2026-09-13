@@ -1,0 +1,1 @@
+"""Intelligence layer: makes recon results reusable while respecting scope. Placeholder."""

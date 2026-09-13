@@ -1,0 +1,13 @@
+{
+  "hostname": "withtxt.example.com",
+  "resolved_at": "2026-01-15T10:33:00Z",
+  "records": [
+    {"record_type": "A", "value": "198.51.100.7"},
+    {"record_type": "AAAA", "value": "2001:db8::7"},
+    {"record_type": "CNAME", "value": "alias.example.net."},
+    {"record_type": "MX", "value": "10 mail.example.com."},
+    {"record_type": "NS", "value": "ns1.example.com."},
+    {"record_type": "TXT", "value": "\"v=spf1 -all\""}
+  ],
+  "errors": {}
+}

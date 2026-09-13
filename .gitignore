@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment / secrets
+.env
+*.env
+
+# ARGUS runtime artifacts
+storage/raw/*
+storage/evidence/*
+storage/screenshots/*
+storage/reports/*
+!storage/raw/.gitkeep
+!storage/evidence/.gitkeep
+!storage/screenshots/.gitkeep
+!storage/reports/.gitkeep

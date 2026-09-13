@@ -1,0 +1,1 @@
+"""Web recon adapters (httpx, katana, ffuf, feroxbuster). Placeholder for Step 9."""
