@@ -1,27 +1,21 @@
-"""Deterministic cloud-model demo ("07_AI_AGENTS.md" §Cloud/stronger model, "12_AI_PROMPTS.md"
-§Output Schemas — ARGUS hybrid AI layer, Phase 6).
+"""Cloud/stronger-model demo ("07_AI_AGENTS.md" §Cloud/stronger model:37-39, "12_AI_PROMPTS.md"
+§Output Schemas; Phase 6).
 
-Phase-6 DoD ("10_IMPLEMENTATION_PLAN.md" §Phase 6): the AI layer produces schema-valid structured
-output end-to-end through the test harness with **no live target and no live model** — every
-output is a deterministic *proposal*. This module is the cloud half of that harness
-("07_AI_AGENTS.md" §Cloud/stronger model): complex correlation, attack-surface reasoning,
-multi-source analysis, complicated API relationships, hypothesis generation, prioritization, and
-complex reconnaissance planning.
-
-The output contract is byte-exact with the Common Output Contract (07_AI_AGENTS.md:44-61) and is
-identical in shape to `local_model.simulate` — the router's decision changes which model id runs,
-never the shape. Cloud outputs cite real (in-run) evidence ids; hypotheses are never self-labelled
-``VALIDATED_FINDING`` (07_AI_AGENTS.md §forbidden actions).
+Deterministic stand-in for the cloud/stronger model in the Phase-6 hybrid demo. It is a pure
+function: given a documented *cloud* task type plus the observation set it is asked to reason
+over, it produces exactly one Common Output Contract object labelled ``HYPOTHESIS`` — it may
+never label its own output ``VALIDATED_FINDING``, may never execute anything, and may never
+invent observations (07_AI_AGENTS.md "AI Safety Boundary", "05_DATA_MODEL.md" §hypotheses).
+Used only by the test harness; no live target is required.
 """
 
 from __future__ import annotations
 
-from typing import Any, FrozenSet, Mapping, Optional, Sequence
+from dataclasses import dataclass
+from typing import Any, Mapping, Sequence
 
-from ai.local_model import _iso_now  # noqa: PLC2701 (private sibling reuse, same package)
-
-# Documented cloud-model task taxonomy (07_AI_AGENTS.md:37-39); anything else is *not* a cloud task.
-CLOUD_TASK_TYPES: FrozenSet[str] = frozenset(
+# Cloud-model task taxonomy (07_AI_AGENTS.md:37-39). Deterministic demo only.
+CLOUD_TASK_TYPES = frozenset(
     {
         "complex_correlation",
         "attack_surface_reasoning",
@@ -33,63 +27,68 @@ CLOUD_TASK_TYPES: FrozenSet[str] = frozenset(
     }
 )
 
-_MODEL_ID = "ARGUS-cloud-01"
+_MODEL_ID = "argus-cloud-demo-01"
 
-_PRIORITIES = frozenset({"low", "medium", "high"})
+_TRUTH_LABEL = "HYPOTHESIS"
 
 
 class CloudModelError(Exception):
-    """The cloud model rejected input it may not reason about (07_AI_AGENTS.md §forbidden)."""
+    """Rejected a cloud-model request that is not part of the documented demo contract."""
 
 
-def simulate(
+@dataclass(frozen=True)
+class CloudProposal:
+    """One schema-shaped structured-output proposal from the cloud model."""
+
+    type: str
+    target: str
+    observation: str
+    reasoning: str
+    potential_issue: str
+    evidence_value: tuple[str, ...]
+    confidence: float
+    priority: str
+    validation_step: str
+    truth_label: str
+    model_used: str
+
+
+def simulate_cloud(
     task_type: str,
     target: str,
     observations: Sequence[str],
     /,
-    confidence: Optional[float] = None,
-) -> dict[str, Any]:
-    """Deterministically produce one schema-valid cloud-model proposal.
+    *,
+    confidence: float = 0.8,
+    priority: str = "high",
+) -> CloudProposal:
+    """Deterministically propose one structured hypothesis for a documented cloud task.
 
-    Local to Phase-6 harness: no live model, no target I/O — the proposal aggregates the
-    ``observations`` it is given and must be supported by them (Common Output Contract
-    §evidence). Raises ``CloudModelError`` for off-taxonomy task types, empty/missing evidence
-    observations, or an out-of-range ``confidence`` — deterministic, and the output never leaves
-    this function unless it is already schema-valid.
+    Deterministic: identical (task_type, target, observations) always yields an identical ddd
+    proposal. Never validates itself and never asserts a finding.
     """
     if task_type not in CLOUD_TASK_TYPES:
-        raise CloudModelError(
-            f"`{task_type}` is not a documented cloud-model task "
-            f"(07_AI_AGENTS.md §Cloud/stronger model; got one of {sorted(CLOUD_TASK_TYPES)})"
-        )
-    if not target or not isinstance(target, str):
-        raise CloudModelError("cloud tasks require a non-empty string `target`")
-    if not observations or not all(isinstance(o, str) and o.strip() for o in observations):
-        raise CloudModelError("cloud tasks require at least one non-empty observation (evidence)")
-    if confidence is not None and not (0.0 <= float(confidence) <= 1.0):
-        raise CloudModelError(f"confidence must lie within [0.0, 1.0], got {confidence!r}")
+        raise CloudModelError(f"`{task_type}` is not a documented cloud task")
+    if not target or not observations:
+        raise CloudModelError("cloud tasks require a target and >=1 observation")
+    if not (0.0 <= confidence <= 1.0):
+        raise CloudModelError("confidence must be within [0.0, 1.0]")
 
-    used = float(confidence) if confidence is not None else 0.8
-    priority = "high" if task_type in ("complex_recon_planning", "hypothesis_generation") else "medium"
-
-    return {
-        "type": "hypothesis",
-        "target": target,
-        "observation": observations[0],
-        "reasoning": (
-            f"cloud model `{_MODEL_ID}`: `{task_type}` requires complex correlation/"
-            f"attack-surface reasoning across {len(observations)} observation(s)"
-            " (07_AI_AGENTS.md §Cloud/stronger model)"
+    return CloudProposal(
+        type="hypothesis",
+        target=target,
+        observation=observations[0],
+        reasoning=(
+            f"{task_type} correlates {len(observations)} observations; cloud model {_MODEL_ID} "
+            "proposes the following (schema-shaped, hypothesis only)."
         ),
-        "potential_issue": "proposal only; requires a human-approved validation step",
-        "evidence": [
-            {"statement": o, "source": f"cloud-model observation {i + 1} (in-run evidence)"}
-            for i, o in enumerate(observations)
-        ],
-        "confidence": used,
-        "priority": priority,
-        "validation_step": "schema-validated by ai/validator.py (Phase 6)",
-        "truth_label": "HYPOTHESIS",
-        "model_used": _MODEL_ID,
-    }
-</content>
+        potential_issue=(
+            "attack-surface hypothesis; requires human-reviewed validation before promotion."
+        ),
+        evidence_value=tuple(observations),
+        confidence=confidence,
+        priority=priority,
+        validation_step="human-approved validation of the proposed hypothesis",
+        truth_label=_TRUTH_LABEL,
+        model_used=_MODEL_ID,
+    )
