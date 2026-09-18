@@ -41,7 +41,7 @@ def _iso_now() -> str:
     return "1970-01-01T00:00:00+00:00"
 
 
-def simulate(task_type: str, target: str, observation: str, /) -> dict[str, Any]:
+def simulate(task_type: str, target: str, observation: str) -> dict[str, Any]:
     """Deterministically produce a Common-Output-Contract proposal for a local task.
 
     Returns a schema-valid structured object (``type``/``target``/``observation``/``reasoning``/

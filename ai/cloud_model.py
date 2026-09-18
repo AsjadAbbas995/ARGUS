@@ -92,3 +92,53 @@ def simulate_cloud(
         truth_label=_TRUTH_LABEL,
         model_used=_MODEL_ID,
     )
+
+
+def simulate(
+    task_type: str,
+    target: str,
+    observations: Sequence[str],
+    *,
+    confidence: float = 0.8,
+    priority: str = "high",
+) -> dict[str, Any]:
+    """Deterministically propose one schema-valid Common Output Contract object for a cloud task.
+
+    Returns a plain ``dict`` shaped exactly as the Common Output Contract (the ``CloudProposal``
+    dataclass above is not a ``Mapping`` and would not validate). Evidence references only the
+    caller-supplied ``observations`` — nothing is fabricated (07_AI_AGENTS.md "AI Safety
+    Boundary"). Deterministic: identical inputs always yield identical output; never labels its
+    own proposal ``VALIDATED_FINDING`` and never executes anything.
+    """
+    if task_type not in CLOUD_TASK_TYPES:
+        raise CloudModelError(f"`{task_type}` is not a documented cloud task")
+    if not target or not observations:
+        raise CloudModelError("cloud tasks require a target and at least one observation")
+    if not (0.0 <= confidence <= 1.0):
+        raise CloudModelError("confidence must be within [0.0, 1.0]")
+    if priority not in {"low", "medium", "high"}:
+        raise CloudModelError("priority must be one of low | medium | high")
+
+    return {
+        "type": "hypothesis",  # demos never self-validate
+        "target": target,
+        "observation": observations[0],
+        "reasoning": (
+            f"{task_type} correlates {len(observations)} observations; cloud model {_MODEL_ID} "
+            "proposes the following (schema-shaped, hypothesis only)."
+        ),
+        "potential_issue": (
+            "attack-surface hypothesis; requires human-reviewed validation before promotion."
+        ),
+        "evidence": [
+            {
+                "statement": obs,
+                "source": f"cloud_model({_MODEL_ID}) demo (caller-supplied observation)",
+            }
+            for obs in observations
+        ],
+        "confidence": confidence,
+        "priority": priority,
+        "validation_step": "human-approved validation of the proposed hypothesis",
+        "truth_label": _TRUTH_LABEL,
+    }

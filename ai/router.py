@@ -19,7 +19,9 @@ requirements, cost, latency, and local-model availability. The hybrid ballot res
   context is under the documented threshold AND local is available; otherwise cloud (complex
   correlation, attack-surface reasoning, multi-source analysis, complicated API relationships,
   hypothesis generation, prioritization, complex reconnaissance planning, or any
-  high-complexity/large-context/local-unavailable task).
+  high-complexity/large-context task. **Fail-closed**: a would-be-local carve-out task with no
+  local model available is *rejected* (``RoutingError``) — it may never silently escalate to
+  cloud (07_AI_AGENTS.md §AI Router "fail closed"; Phase-6 DoD).
 """
 
 from __future__ import annotations
@@ -108,9 +110,6 @@ def select(p: TaskProfile, cfg: RouteConfig) -> RoutingDecision:
         return _decision("cloud", cfg, p, "mode=cloud forces the cloud model")
 
     # hybrid: apply the documented ballot.
-    if not p.local_available:
-        return _decision("cloud", cfg, p, "local model unavailable → cloud")
-
     if p.task_type in CLOUD_TASK_TYPES:
         return _decision("cloud", cfg, p, f"`{p.task_type}` requires cloud reasoning")
 
@@ -121,11 +120,21 @@ def select(p: TaskProfile, cfg: RouteConfig) -> RoutingDecision:
         return _decision("cloud", cfg, p, "context size exceeds local ceiling → cloud")
 
     if p.task_type in LOCAL_TASK_TYPES:
+        if not p.local_available:
+            raise RoutingError(
+                f"`{p.task_type}` would route to the documented local carve-out but no local model "
+                "is available; fail-closed: rejected rather than silently escalated to cloud"
+            )
         return _decision("local", cfg, p, f"`{p.task_type}` fits the documented local carve-out")
 
     # Unknown task type with modest profile: default to local (repetitive/light baseline),
     # matching the spec's default bias toward cost/latency efficiency when nothing forces cloud.
     average = p.reasoning_depth in {"low", "medium"} and p.complexity in {"low", "medium"}
+    if average and not p.local_available:
+        raise RoutingError(
+            f"`{p.task_type}` would default to local but no local model "
+            "is available; fail-closed: rejected rather than silently escalated to cloud"
+        )
     return _decision(
         "local" if average else "cloud",
         cfg,
