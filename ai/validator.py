@@ -129,7 +129,9 @@ def validate_structured_output(output: Mapping[str, Any]) -> ValidationResult:
         )
 
     truth_label = output.get("truth_label")
-    if truth_label is not None and truth_label not in TRUTH_LABELS:
+    if truth_label is not None and (
+        not isinstance(truth_label, str) or truth_label not in TRUTH_LABELS
+    ):
         failures.append(
             ValidationFailure("truth_label", f"invalid truth label `{truth_label}`")
         )

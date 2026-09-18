@@ -25,7 +25,7 @@ LOCAL_TASK_TYPES = frozenset(
         "tech_identification",
         "keyword_classification",
         "normalization",
-        "basic_summarization",
+        "summarization",            # basic summarization
         "repetitive_analysis",
     }
 )

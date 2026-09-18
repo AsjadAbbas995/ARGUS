@@ -3,9 +3,9 @@
 
 Phase-6 DoD ("10_IMPLEMENTATION_PLAN.md" §Phase 6 — AI Layer): the router chooses local vs. cloud
 **per the documented criteria** and never guesses. This implementation is a pure, deterministic
-pure function: same profile + config ⇒ same ``RoutingDecision``, every timecars never any live
-call, never any target, never any wall-clock. It is the deterministic core the Phase-6 test
-oracle locks onto.
+function: same profile + config ⇒ same ``RoutingDecision``, every time. It never makes any live
+call, never touches any target, never reads the wall-clock. It is the deterministic core the
+Phase-6 test oracle locks onto.
 
 Documented criteria (07_AI_AGENTS.md:41-42): task complexity, context size, expected reasoning
 requirements, cost, latency, and local-model availability. The hybrid ballot resolves as:
