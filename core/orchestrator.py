@@ -15,11 +15,19 @@ Phase-5 scope: a deterministic run/task lifecycle **without AI**. The orchestrat
 The orchestrator is deliberately decoupled from the database: it takes a *storage* object
 exposing ``runs``/``tasks``/``tool_runs`` (the ``Repositories`` facade implements it; tests
 inject an in-memory fake), and a ``ToolRunner``-like ``run_tool`` callable.
+
+Phase-8 scope ("10_IMPLEMENTATION_PLAN.md" §Phase 8 — Adaptive Recon Loop): an optional
+``analysis`` hook turns the walk into the adaptive loop from ``08_ORCHESTRATOR.md`` / "03_RECON_PIPELINE.md"
+§27 — at every ``ANALYZING`` step the hook proposes new tasks, the planner fingerprint-dedupes
+them, and ``WAITING_FOR_NEXT_TASK`` re-enters ``RECONNING`` while passes keep generating new
+work, reaching ``COMPLETED`` only when re-analysis adds nothing. Task-level fingerprinting
+prevents infinite loops (08_ORCHESTRATOR.md §Task Deduplication) and ``max_loop_passes`` is the
+graceful instability/safety limit. Without a hook the phase-5 linear walk is unchanged.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Optional
 from uuid import UUID
 
@@ -42,17 +50,10 @@ _RUN_STEPS = [
 _RUN_TERMINAL = {"COMPLETED", "FAILED", "CANCELLED"}
 _TASK_RUNNABLE = {"pending"}
 
-# Toolless "analysis" task types are marked completed directly; the runner is only invoked for
-# tasks whose type maps to an external tool (in Phase 5 this is driven explicitly).
-TOOL_TASK_TYPES = {
-    "subdomain_enum",
-    "dns_resolve",
-    "http_probe",
-    "port_scan",
-    "web_crawl",
-    "tech_detect",
-    "dictionary_bruteforce",
-}
+# A Phase-8 adaptive-loop analysis hook: given the run and its current task list, it proposes
+# new reconnaissance tasks (the planner re-fingerprints and dedupes them). ``None`` disables
+# the loop entirely, preserving Phase-5 behaviour.
+AnalysisHook = Callable[["Run", list["Task"]], list["Task"]]
 
 
 class OrchestratorError(Exception):
@@ -92,11 +93,17 @@ class Storage:
 class Orchestrator:
     storage: Storage
     run_tool: Callable[[Task], ToolRun]  # (task) -> ToolRun; Phase-5 deterministic demos
+    analysis: Optional[AnalysisHook] = None  # Phase-8 adaptive loop; None keeps Phase-5 behaviour
+    max_loop_passes: int = 32  # instability/safety limit (01_PRODUCT_SPEC.md §10)
+    _loop_pass: int = field(default=0, init=False, repr=False, compare=False)
+    _pass_new_tasks: bool = field(default=False, init=False, repr=False, compare=False)
 
     # -- run lifecycle ------------------------------------------------------
 
     def create_run(self, run: Run, planned: Iterable[Task] = ()) -> Run:
         """Persist a new run (CREATED) and, if given, seed its first planned tasks."""
+        self._loop_pass = 0
+        self._pass_new_tasks = False
         stored = self.storage.create_run(run)
         self.storage.set_run_status(stored.id, "CREATED")
         if planned:
@@ -131,15 +138,52 @@ class Orchestrator:
         run = self._require_run(run_id)
         if run.status in _RUN_TERMINAL:
             raise BadRunTransition(f"run {run_id} is terminal ({run.status})")
+        if run.status == "ANALYZING" and self.analysis is not None:
+            self._run_analysis_pass(run_id)
         if run.status == "WAITING_FOR_NEXT_TASK":
-            self.storage.set_run_status(run_id, "COMPLETED")
-            return "COMPLETED"
+            return self._next_pass(run_id)
         idx = _RUN_STEPS.index(run.status) if run.status in _RUN_STEPS else -1
         next_step = _RUN_STEPS[idx + 1] if idx >= 0 and idx + 1 < len(_RUN_STEPS) else None
         if next_step is None:
             raise BadRunTransition(f"no step after {run.status}")
         self.storage.set_run_status(run_id, next_step)
         return next_step
+
+    def _run_analysis_pass(self, run_id: UUID) -> bool:
+        """Run the analysis hook and enqueue its proposed (fingerprint-deduped) tasks.
+
+        Returns whether the pass generated any *new* (never-seen-in-this-run) fingerprint — the
+        adaptive-loop progress signal ("COMPLETED only when re-analysis adds nothing new",
+        08_ORCHESTRATOR.md). ``plan`` deliberately re-issues pending/in-flight/failed
+        fingerprints ("no lost work", Phase 5), so the signal is the set of fingerprints the
+        pass introduced that were not present in *any* status before it.
+        """
+        self._loop_pass += 1
+        run = self._require_run(run_id)
+        before = {t.fingerprint for t in self.storage.list_tasks(run.id) if t.fingerprint}
+        proposed = self.analysis(run, self.storage.list_tasks(run.id))
+        self.plan(run, proposed)
+        after = {t.fingerprint for t in self.storage.list_tasks(run.id) if t.fingerprint}
+        self._pass_new_tasks = bool(after - before)
+        return self._pass_new_tasks
+
+    def _next_pass(self, run_id: UUID) -> str:
+        """Adaptive-loop stop decision at ``WAITING_FOR_NEXT_TASK`` (08_ORCHESTRATOR.md).
+
+        Re-enter ``RECONNING`` while a pass generated new (non-duplicate) tasks; reach
+        ``COMPLETED`` once re-analysis produces nothing new. ``max_loop_passes`` is the
+        instability/safety limit — exceeding it ends the run gracefully as ``CANCELLED``
+        (01_PRODUCT_SPEC.md §10). Without an ``analysis`` hook the run always completes,
+        preserving Phase-5 behaviour.
+        """
+        if self.analysis is not None and self._pass_new_tasks:
+            if self._loop_pass >= self.max_loop_passes:
+                self.storage.set_run_status(run_id, "CANCELLED")
+                return "CANCELLED"
+            self.storage.set_run_status(run_id, "RECONNING")
+            return "RECONNING"
+        self.storage.set_run_status(run_id, "COMPLETED")
+        return "COMPLETED"
 
     def advance(self, run_id: UUID, tool: Optional[str] = None) -> str:
         """Advance the run one deterministic step.
