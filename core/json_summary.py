@@ -140,4 +140,3 @@ def _json_default(value: Any) -> Any:
     if isinstance(value, (UUID, datetime)):
         return str(value)
     raise TypeError(f"not JSON-serialisable: {type(value).__name__}")
-</content>
