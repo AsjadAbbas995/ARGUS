@@ -7,15 +7,15 @@
   "use strict";
 
   var KEY_STORE = "argus.dashboard.key";
-  var keyInput = document.getElementById("key");
+  var keyInput = document.getElementById("apiKey");
   var connectBtn = document.getElementById("connect");
-  var statusEl = document.getElementById("status");
-  var runBox = document.getElementById("runBox");
+  var statusEl = document.getElementById("authStatus");
+  var runBox = document.getElementById("auth");
   var runsEl = document.getElementById("runs");
   var runList = document.getElementById("runList");
-  var hySec = document.getElementById("hyps");
-  var hyList = document.getElementById("hyList");
-  var runTitle = document.getElementById("runTitle");
+  var hySec = document.getElementById("hypotheses");
+  var hyList = document.getElementById("hypoList");
+  var runTitle = document.getElementById("currentRun");
 
   var apiKey = "";
   var base = "/api/v1";
