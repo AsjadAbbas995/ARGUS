@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARGUS Operator Dashboard</title>
+<link rel="stylesheet" href="/dashboard/app.css">
+</head>
+<body>
+<header>
+<h1>ARGUS Operator Dashboard</h1>
+<p class="tagline">Human-in-the-loop review of security hypotheses. Each validation step is approved or rejected individually.</p>
+</header>
+<main>
+<section id="auth">
+<h2>Operator login</h2>
+<div class="row">
+<label for="apiKey">API key</label>
+<input id="apiKey" type="password" autocomplete="off" spellcheck="false">
+<button id="connect" type="button">Connect</button>
+</div>
+<p id="authStatus" class="status" aria-live="polite"></p>
+</section>
+<section id="runs" hidden>
+<h2>Runs</h2>
+<ul id="runList" class="list"></ul>
+</section>
+<section id="hypotheses" hidden>
+<h2>Hypotheses for run <span id="currentRun"></span></h2>
+<p id="emptyNote" class="muted" hidden>No hypotheses recorded for this run.</p>
+<div id="hypoList" class="cards"></div>
+</section>
+</main>
+<footer>
+<p class="muted">Every review action is a single, individual step routed through the orchestrator seam. There is no bulk approval control by design.</p>
+</footer>
+<script src="/dashboard/app.js"></script>
+</body>
+</html>

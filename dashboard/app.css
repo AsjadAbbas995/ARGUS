@@ -1,0 +1,37 @@
+/* Phase 11: static, dependency-free ARGUS dashboard styling (no framework). */
+:root{color-scheme:light;}
+*{box-sizing:border-box;}
+body{font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;margin:0;color:#1c2733;background:#f2f4f7;}
+header{padding:1.4rem;background:#101d2e;color:#eef3f9;}
+header h1{margin:0;font-size:1.35rem;}
+header p{margin:.25rem 0 0;color:#a9c0d8;font-size:.9rem;}
+main{padding:1.4rem;}
+section{margin:0 0 1.6rem;padding:1.1rem;background:#fff;border:1px solid #d9dfe6;border-radius:8px;}
+h2{margin:0 0 .8rem;font-size:1rem;}
+.row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
+input[type=password]{padding:.45rem .6rem;border:1px solid #c5cdd6;border-radius:5px;font:inherit;}
+button{padding:.45rem .85rem;border:1px solid #c5cdd6;border-radius:5px;background:#eef2f6;font:inherit;cursor:pointer;}
+button.primary{background:#14507a;color:#fff;border-color:#14507a;}
+button.approve{background:#1d7a3c;color:#fff;border-color:#1d7a3c;}
+button.reject{background:#a3231f;color:#fff;border-color:#a3231f;}
+button:disabled{opacity:.55;cursor:not-allowed;}
+button[hidden]{display:none;}
+.muted{color:#5b6b7b;}
+.status{font-size:.85rem;color:#5b6b7b;}
+.list{list-style:none;margin:0;padding:0;}
+.list li{margin:.35rem 0;}
+.run{border:1px solid #d9dfe6;border-radius:6px;padding:.6rem .85rem;width:100%;text-align:left;background:#fbfcfd;}
+.cards{display:flex;flex-direction:column;gap:.7rem;}
+.card{border:1px solid #d9dfe6;border-left-width:5px;border-radius:7px;padding:.85rem 1rem;}
+.card.pending{border-left-color:#c0810e;}
+.card.approved{border-left-color:#1d7a3c;}
+.card.rejected{border-left-color:#a3231f;}
+.card h3{margin:0 0 .3rem;font-size:1rem;}
+.card .meta{font-size:.8rem;color:#5b6b7b;margin:.1rem 0 .45rem;}
+.card .stmt{font-size:.92rem;margin:0 0 .6rem;}
+.card .actrow{display:flex;gap:.55rem;flex-wrap:wrap;}
+.card .reason{font-size:.85rem;margin:.55rem 0 0;color:#5b6b7b;}
+footer{padding:1rem 1.4rem;color:#5b6b7b;font-size:.82rem;border-top:1px solid #d9dfe6;}
+[hidden]{display:none !important;}
+@media(max-width:600px){header,main{padding:1rem;}}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;}}

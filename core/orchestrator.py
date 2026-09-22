@@ -1,13 +1,61 @@
-"""Initial Orchestrator (``08_ORCHESTRATOR.md`` §run state machine / task lifecycle / resumability).
+"""Initial Orchestrator (``08_ORCHESTRATOR.md`` ??run state machine / task lifecycle / resumability).
+    # ---- Phase 11 additive seam: operator hypothesis review ledger --------------
+    # Ships per-run, per-hypothesis human review on top of the existing run state.
+    # Deliberately exposes per-step approve/reject only -- the dashboard contract
+    # forbids any "approve all" / bulk control, and none exists here or upstream.
+
+    def list_runs(self) -> list:
+        return list(self._runs.values())
+
+    def list_hypotheses(self, run_id) -> list:
+        return [dict(h) for h in self._hypothesis_ledger().get(str(run_id), [])]
+
+    def _hypothesis_ledger(self) -> dict:
+        if getattr(self, "_seam_hypothesis_ledger", None) is None:
+            self._seam_hypothesis_ledger = {}
+        return self._seam_hypothesis_ledger
+
+    def _record_hypothesis(self, run_id, hypothesis_id, statement, truth_label,
+                           confidence, priority, severity, target, step) -> dict:
+        rec = {
+            "id": hypothesis_id,
+            "run_id": run_id,
+            "statement": statement,
+            "truth_label": truth_label,
+            "confidence": confidence,
+            "priority": priority,
+            "severity": severity,
+            "target": target,
+            "validation_step": step,
+            "status": "pending",
+            "reason": "",
+        }
+        self._hypothesis_ledger().setdefault(str(run_id), []).append(rec)
+        return dict(rec)
+
+    def approve_hypothesis(self, run_id, hypothesis_id) -> dict:
+        for h in self._hypothesis_ledger().get(str(run_id), []):
+            if str(h["id"]) == str(hypothesis_id):
+                h["status"] = "approved"
+                return dict(h)
+        return None
+
+    def reject_hypothesis(self, run_id, hypothesis_id, reason="") -> dict:
+        for h in self._hypothesis_ledger().get(str(run_id), []):
+            if str(h["id"]) == str(hypothesis_id):
+                h["status"] = "rejected"
+                h["reason"] = str(reason or "operator rejected")
+                return dict(h)
+        return None
 
 Phase-5 scope: a deterministic run/task lifecycle **without AI**. The orchestrator owns:
 
-* the run state machine (``CREATED → VALIDATING → INITIALIZING → RECONNING → ANALYZING →
-  PLANNING → EXECUTING → CORRELATING → PRIORITIZING → WAITING_FOR_NEXT_TASK → COMPLETED``,
+* the run state machine (``CREATED ??? VALIDATING ??? INITIALIZING ??? RECONNING ??? ANALYZING ???
+  PLANNING ??? EXECUTING ??? CORRELATING ??? PRIORITIZING ??? WAITING_FOR_NEXT_TASK ??? COMPLETED``,
   plus ``FAILED``/``CANCELLED``);
 * task scheduling: it hands the *planner* the same deterministic inputs and executes the
   returned order, so planning twice yields the same plan;
-* **resumability** — on restart it re-evaluates tasks found ``running`` instead of treating
+* **resumability** ??? on restart it re-evaluates tasks found ``running`` instead of treating
   them as complete, and the run re-enters the state machine at the checkpoint status recorded
   in ``runs.status``. The planner's completed-fingerprint suppression guarantees no duplicate
   work; re-issued in-flight/failed fingerprints guarantee no lost work.
@@ -16,12 +64,12 @@ The orchestrator is deliberately decoupled from the database: it takes a *storag
 exposing ``runs``/``tasks``/``tool_runs`` (the ``Repositories`` facade implements it; tests
 inject an in-memory fake), and a ``ToolRunner``-like ``run_tool`` callable.
 
-Phase-8 scope ("10_IMPLEMENTATION_PLAN.md" §Phase 8 — Adaptive Recon Loop): an optional
+Phase-8 scope ("10_IMPLEMENTATION_PLAN.md" ??Phase 8 ??? Adaptive Recon Loop): an optional
 ``analysis`` hook turns the walk into the adaptive loop from ``08_ORCHESTRATOR.md`` / "03_RECON_PIPELINE.md"
-§27 — at every ``ANALYZING`` step the hook proposes new tasks, the planner fingerprint-dedupes
+??27 ??? at every ``ANALYZING`` step the hook proposes new tasks, the planner fingerprint-dedupes
 them, and ``WAITING_FOR_NEXT_TASK`` re-enters ``RECONNING`` while passes keep generating new
 work, reaching ``COMPLETED`` only when re-analysis adds nothing. Task-level fingerprinting
-prevents infinite loops (08_ORCHESTRATOR.md §Task Deduplication) and ``max_loop_passes`` is the
+prevents infinite loops (08_ORCHESTRATOR.md ??Task Deduplication) and ``max_loop_passes`` is the
 graceful instability/safety limit. Without a hook the phase-5 linear walk is unchanged.
 """
 
@@ -94,7 +142,7 @@ class Orchestrator:
     storage: Storage
     run_tool: Callable[[Task], ToolRun]  # (task) -> ToolRun; Phase-5 deterministic demos
     analysis: Optional[AnalysisHook] = None  # Phase-8 adaptive loop; None keeps Phase-5 behaviour
-    max_loop_passes: int = 32  # instability/safety limit (01_PRODUCT_SPEC.md §10)
+    max_loop_passes: int = 32  # instability/safety limit (01_PRODUCT_SPEC.md ??10)
     _loop_pass: int = field(default=0, init=False, repr=False, compare=False)
     _pass_new_tasks: bool = field(default=False, init=False, repr=False, compare=False)
 
@@ -111,7 +159,7 @@ class Orchestrator:
         return stored
 
     def start(self, run_id: UUID) -> None:
-        """Begin the run: the first deterministic state transition (CREATED → VALIDATING)."""
+        """Begin the run: the first deterministic state transition (CREATED ??? VALIDATING)."""
         self._advance_step(run_id)
 
     # -- planning / scheduling ----------------------------------------------
@@ -152,7 +200,7 @@ class Orchestrator:
     def _run_analysis_pass(self, run_id: UUID) -> bool:
         """Run the analysis hook and enqueue its proposed (fingerprint-deduped) tasks.
 
-        Returns whether the pass generated any *new* (never-seen-in-this-run) fingerprint — the
+        Returns whether the pass generated any *new* (never-seen-in-this-run) fingerprint ??? the
         adaptive-loop progress signal ("COMPLETED only when re-analysis adds nothing new",
         08_ORCHESTRATOR.md). ``plan`` deliberately re-issues pending/in-flight/failed
         fingerprints ("no lost work", Phase 5), so the signal is the set of fingerprints the
@@ -172,8 +220,8 @@ class Orchestrator:
 
         Re-enter ``RECONNING`` while a pass generated new (non-duplicate) tasks; reach
         ``COMPLETED`` once re-analysis produces nothing new. ``max_loop_passes`` is the
-        instability/safety limit — exceeding it ends the run gracefully as ``CANCELLED``
-        (01_PRODUCT_SPEC.md §10). Without an ``analysis`` hook the run always completes,
+        instability/safety limit ??? exceeding it ends the run gracefully as ``CANCELLED``
+        (01_PRODUCT_SPEC.md ??10). Without an ``analysis`` hook the run always completes,
         preserving Phase-5 behaviour.
         """
         if self.analysis is not None and self._pass_new_tasks:
