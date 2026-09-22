@@ -13,6 +13,25 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
+#: Extra record attributes whose keys look secret must never be written verbatim
+#: into structured logs (Phase-12 hardening: "logs never leak secrets"). Keys are
+#: matched case-insensitively on the token set below. Note this is belted-and-
+#: braced with the explicit standard-key skip-list in ``JsonFormatter.format``.
+_SENSITIVE_EXTRA_TOKENS = (
+    "password",
+    "passwd",
+    "secret",
+    "token",
+    "apikey",
+    "api_key",
+    "auth",
+    "credential",
+    "session",
+    "cookie",
+    "authorization",
+    "bearer",
+)
+
 
 class JsonFormatter(logging.Formatter):
     """Formats a log record as one JSON object per line."""
@@ -51,6 +70,9 @@ class JsonFormatter(logging.Formatter):
                 "taskName",
                 "message",
             }:
+                continue
+            if any(token in key.lower() for token in _SENSITIVE_EXTRA_TOKENS):
+                payload.setdefault(key, "***REDACTED***")
                 continue
             payload.setdefault(key, value)
         try:
